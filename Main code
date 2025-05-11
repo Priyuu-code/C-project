@@ -1,0 +1,213 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <time.h>
+#include <unistd.h>
+#include <pthread.h>
+
+#define MAX_TASK_LENGTH 100
+#define FILENAME "todo.txt"
+#define HYDRATION_INTERVAL 600 // Time interval for hydration reminder in seconds
+
+void addTask();
+void viewTasks();
+void deleteTask();
+void startTaskTimer();
+void hydrationReminder();
+void scheduleEvent();
+void startSelfGrowthTimer();
+
+char* thoughts[] = {
+    "Believe you can and you're halfway there.",
+    "Stay positive, work hard, make it happen.",
+    "Every day is a second chance.",
+    "The secret of getting ahead is getting started.",
+    "You are capable of amazing things."
+};
+
+void* hydrationReminderThread(void* arg) {
+    while (1) {
+        sleep(HYDRATION_INTERVAL);
+        hydrationReminder();
+    }
+    return NULL;
+}
+
+int main() {
+    int choice;
+    pthread_t reminderThread;
+
+    // Start the hydration reminder in the background
+    pthread_create(&reminderThread, NULL, hydrationReminderThread, NULL);
+
+    while (1) {
+        printf("\nTo-Do List Application\n");
+        printf("1. Add Task\n");
+        printf("2. View Tasks\n");
+        printf("3. Delete Task\n");
+        printf("4. Start Task Timer\n");
+        printf("5. Schedule Event with Alarm\n");
+        printf("6. Start Self-Growth Timer\n");
+        printf("7. Exit\n");
+        printf("Enter your choice: ");
+        scanf("%d", &choice);
+        getchar(); // To consume the newline character
+
+        switch (choice) {
+            case 1:
+                addTask();
+                break;
+            case 2:
+                viewTasks();
+                break;
+            case 3:
+                deleteTask();
+                break;
+            case 4:
+                startTaskTimer();
+                break;
+            case 5:
+                scheduleEvent();
+                break;
+            case 6:
+                startSelfGrowthTimer();
+                break;
+            case 7:
+                printf("Exiting application. Stay motivated!\n");
+                exit(0);
+            default:
+                printf("Invalid choice. Please try again.\n");
+        }
+    }
+
+    pthread_join(reminderThread, NULL);
+    return 0;
+}
+
+void addTask() {
+    char task[MAX_TASK_LENGTH];
+    FILE *file = fopen(FILENAME, "a");
+
+    if (file == NULL) {
+        printf("Unable to open file.\n");
+        return;
+    }
+
+    printf("Enter the task: ");
+    fgets(task, MAX_TASK_LENGTH, stdin);
+    fprintf(file, "%s", task);
+    fclose(file);
+
+    printf("Task added successfully.\n");
+}
+
+void viewTasks() {
+    char task[MAX_TASK_LENGTH];
+    FILE *file = fopen(FILENAME, "r");
+
+    if (file == NULL) {
+        printf("No tasks found.\n");
+        return;
+    }
+
+    printf("\nYour Tasks:\n");
+    int count = 1;
+    while (fgets(task, MAX_TASK_LENGTH, file) != NULL) {
+        printf("%d. %s", count++, task);
+    }
+    fclose(file);
+}
+
+void deleteTask() {
+    int taskNumber, count = 1;
+    char task[MAX_TASK_LENGTH];
+    FILE *file = fopen(FILENAME, "r");
+    FILE *tempFile = fopen("temp.txt", "w");
+
+    if (file == NULL || tempFile == NULL) {
+        printf("Unable to open file.\n");
+        return;
+    }
+
+    printf("Enter the task number to delete: ");
+    scanf("%d", &taskNumber);
+    getchar(); // Consume newline character
+
+    while (fgets(task, MAX_TASK_LENGTH, file) != NULL) {
+        if (count != taskNumber) {
+            fputs(task, tempFile);
+        }
+        count++;
+    }
+
+    fclose(file);
+    fclose(tempFile);
+
+    remove(FILENAME);
+    rename("temp.txt", FILENAME);
+
+    printf("Task deleted successfully.\n");
+}
+
+void startTaskTimer() {
+    int minutes;
+    printf("Enter the time in minutes to complete the task: ");
+    scanf("%d", &minutes);
+
+    int seconds = minutes * 60;
+    printf("Timer started for %d minutes. Focus on your task!\n", minutes);
+
+    while (seconds > 0) {
+        printf("Time left: %d seconds\r", seconds--);
+        fflush(stdout);
+        sleep(1);
+    }
+
+    printf("\nTime's up! Hope you made progress!\n");
+}
+
+void scheduleEvent() {
+    int hours, minutes;
+    printf("Enter the event time (HH MM in 24-hour format): ");
+    scanf("%d %d", &hours, &minutes);
+
+    time_t now = time(NULL);
+    struct tm eventTime = *localtime(&now);
+    eventTime.tm_hour = hours;
+    eventTime.tm_min = minutes;
+    eventTime.tm_sec = 0;
+
+    time_t eventTimestamp = mktime(&eventTime);
+    time_t alarmTime = eventTimestamp - (30 * 60);
+
+    printf("Event scheduled at %02d:%02d. You will receive an alarm 30 minutes before.\n", hours, minutes);
+
+    while (time(NULL) < alarmTime) {
+        sleep(1);
+    }
+
+    printf("\n*** Alarm: Your event is starting in 30 minutes! ***\n");
+}
+
+void startSelfGrowthTimer() {
+    int minutes;
+    printf("Enter preparation time in minutes for self-growth: ");
+    scanf("%d", &minutes);
+
+    int seconds = minutes * 60;
+    printf("Self-growth preparation timer started for %d minutes. Stay focused!\n", minutes);
+
+    while (seconds > 0) {
+        printf("Time left: %d seconds\r", seconds--);
+        fflush(stdout);
+        sleep(1);
+    }
+
+    printf("\nTime's up! Hope you have grown stronger and wiser!\n");
+}
+
+void hydrationReminder() {
+    int randomIndex = rand() % 5;
+    printf("\n*** Reminder: Stay hydrated! ***\n");
+    printf("Inspiration: %s\n", thoughts[randomIndex]);
+}
